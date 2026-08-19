@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Palette roles. Dark is the default look for a developer tool, but both modes are
+   defined explicitly - never an automatic flip. Values come from the validated
+   reference palette. */
+:root {
+  color-scheme: dark;
+  --plane: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --line: rgba(255, 255, 255, 0.10);
+
+  --s1: #3987e5;   /* categorical slot 1 - baseline version */
+  --s2: #d95926;   /* categorical slot 2 - candidate version */
+
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --plane: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --line: rgba(11, 11, 11, 0.10);
+
+  --s1: #2a78d6;
+  --s2: #eb6834;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.tnum { font-variant-numeric: tabular-nums; }

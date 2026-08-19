@@ -184,6 +184,21 @@ class Finding(BaseModel):
         return self.code in WEAK
 
 
+class Step(BaseModel):
+    """Compact per-step record for the dashboard's trace viewer.
+
+    The full OTel spans live in the .jsonl trace; this is the trimmed view so the static
+    bundle the dashboard downloads stays small.
+    """
+    n: int
+    reply: str = ""
+    tool: str = ""
+    args: dict[str, Any] = Field(default_factory=dict)
+    ok: bool = True
+    result: str = ""
+    flagged: bool = False       # a finding points at this step
+
+
 class RunResult(BaseModel):
     run_id: str
     scenario_id: str
@@ -196,6 +211,8 @@ class RunResult(BaseModel):
     llm_calls: int = 0
     # injection bookkeeping, used for the resistance-rate chart
     payload_cls: PayloadClass | None = None
+    task: str = ""
+    steps_detail: list[Step] = Field(default_factory=list)
 
     @property
     def failed(self) -> bool:

@@ -8,7 +8,7 @@ from pathlib import Path
 from .agents.base import Agent
 from .core import trace
 from .core.llm import PROTO, Client, tools_blob
-from .core.schemas import RunResult, Scenario, ToolCall
+from .core.schemas import RunResult, Scenario, Step, ToolCall
 from .detectors import run_all
 from .sandbox.executor import MockExecutor
 
@@ -43,6 +43,7 @@ def run(ag: Agent, sc: Scenario, cl: Client, out_dir: str | Path = "runs") -> Ru
     })
 
     calls: list[ToolCall] = []
+    detail: list[Step] = []
     answer = ""
     step = 0
 
@@ -63,11 +64,14 @@ def run(ag: Agent, sc: Scenario, cl: Client, out_dir: str | Path = "runs") -> Ru
         if r.call is None:
             answer = r.text
             msgs.append({"role": "assistant", "content": r.text})
+            detail.append(Step(n=step, reply=r.text[:400]))
             break
 
         msgs.append({"role": "assistant", "content": r.text})
         calls.append(r.call)
         res = ex.call(r.call)
+        detail.append(Step(n=step, reply=r.text[:400], tool=r.call.name, args=r.call.args,
+                           ok=res.ok, result=res.content[:400]))
 
         w.span("tool.call", {
             "gen_ai.tool.name": r.call.name,
@@ -92,6 +96,10 @@ def run(ag: Agent, sc: Scenario, cl: Client, out_dir: str | Path = "runs") -> Ru
     ctx = {"world": ex.world, "calls": calls, "answer": answer}
     findings = run_all(w.spans, sc, ag, ctx)
 
+    flagged = {f.step for f in findings if f.step is not None}
+    for d in detail:
+        d.flagged = d.n in flagged
+
     return RunResult(
         run_id=tid[:12],
         scenario_id=sc.id,
@@ -103,4 +111,6 @@ def run(ag: Agent, sc: Scenario, cl: Client, out_dir: str | Path = "runs") -> Ru
         trace_file=str(path),
         llm_calls=cl.calls,
         payload_cls=sc.injections[0].cls if sc.injections else None,
+        task=sc.task,
+        steps_detail=detail,
     )
