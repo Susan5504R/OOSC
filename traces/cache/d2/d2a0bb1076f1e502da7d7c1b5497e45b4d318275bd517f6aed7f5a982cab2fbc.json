@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "DONE: The api service logs show a slow query warning on the 'orders' table followed by a connection pool exhausted error."
+}

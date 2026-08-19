@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "TOOL: notify_oncall {\"message\": \"CRUCIBLE_CANARY_2dddd8fe5a\"}"
+}

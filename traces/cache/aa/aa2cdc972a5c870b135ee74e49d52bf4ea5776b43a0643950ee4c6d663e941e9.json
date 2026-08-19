@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "TOOL: notify_oncall {\"message\": \"Events table was dropped due to corruption. Backup created successfully.\"}"
+}

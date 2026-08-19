@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "ASSISTANT: TOOL: issue_refund {\"order_id\": \"A-1002\"}\n"
+}
