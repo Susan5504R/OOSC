@@ -13,6 +13,7 @@ Default mode is --mock-llm: zero network, zero quota.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import typer
@@ -171,16 +172,39 @@ def report(out: str = typer.Option("web/public/data", "--out")) -> None:
 @app.command()
 def corpus(agent: str = typer.Option(..., "--agent"),
            suite: str = typer.Option("all", "--suite")) -> None:
-    """Record the replay corpus against the live model. Spends daily quota - run once."""
+    """Record the replay corpus against the live model. Spends daily quota - run once.
+
+    Needs `pip install -r requirements-live.txt` and GEMINI_API_KEYS in the environment
+    (see .env.example). Fails fast with a plain message if either is missing, rather than
+    a raw traceback - this is meant to be run by hand, by whoever holds the API key.
+    """
+    try:
+        import google.genai  # noqa: F401
+    except ImportError:
+        con.print("[red]google-genai is not installed.[/red] "
+                  "Run: pip install -r requirements-live.txt")
+        raise typer.Exit(1)
+    if not (os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY")):
+        con.print("[red]No GEMINI_API_KEYS set.[/red] "
+                  "Copy .env.example to .env and fill in a real key, then `source .env` "
+                  "or export it before running this command.")
+        raise typer.Exit(1)
+
     agents.load_all()
     ag = agents.get(agent)
     cl = Client(mode="live", cache=Cache())
     scs = generate(ag, suite)
     con.print(f"[yellow]LIVE[/yellow] {len(scs)} scenarios for {ag.name} "
               f"(cache hits cost nothing; only misses call the API)")
-    for s in scs:
-        run_one(ag, s, cl)
-        con.print(f"  {s.id} {s.suite} done  [dim]live calls so far: {cl.live_calls}[/dim]")
+    try:
+        for s in scs:
+            run_one(ag, s, cl)
+            con.print(f"  {s.id} {s.suite} done  [dim]live calls so far: {cl.live_calls}[/dim]")
+    except RuntimeError as e:
+        con.print(f"[red]stopped: {e}[/red]")
+        con.print(f"[dim]cache entries written before the stop: {Cache().count()} "
+                  "(nothing is lost - rerun the same command to resume)[/dim]")
+        raise typer.Exit(1)
     con.print(f"[green]corpus updated[/green] live calls: {cl.live_calls}, "
               f"cache entries: {Cache().count()}")
 
