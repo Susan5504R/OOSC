@@ -60,6 +60,12 @@ function Detail({ run }: { run: Run }) {
         </div>
       )}
 
+      {run.steps_detail.length === 0 && (
+        <p className="mt-3 text-xs" style={{ color: 'var(--muted)' }}>
+          Step-by-step detail isn't included in this hosted report to keep the deploy small
+          - findings above come from the same trace. Full traces are in the repo.
+        </p>
+      )}
       <ol className="mt-3 space-y-2">
         {run.steps_detail.map((s) => (
           <li
