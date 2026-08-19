@@ -24,10 +24,13 @@ jobs:
       - name: Unit tests
         run: python -m pytest -q
 
+      # --replay reads the committed traces/cache/ corpus - real recorded Gemini output,
+      # not the --mock-llm dev fixture. A cache miss hard-fails rather than silently
+      # calling a live API, which is exactly what keeps this job secret-free.
       - name: Reliability gate (devops@v2 -> devops@v1 must fail)
         run: |
           set +e
-          python -m crucible.cli ci --base devops@v2 --head devops@v1
+          python -m crucible.cli ci --base devops@v2 --head devops@v1 --replay
           rc=$?
           set -e
           if [ $rc -ne 1 ]; then
@@ -37,11 +40,26 @@ jobs:
           echo "gate correctly blocked the regression"
 
       - name: Reliability gate (devops@v1 -> devops@v2 must pass)
-        run: python -m crucible.cli ci --base devops@v1 --head devops@v2
+        run: python -m crucible.cli ci --base devops@v1 --head devops@v2 --replay
+
+      - name: Reliability gate (refund@v2 -> refund@v1 must fail)
+        run: |
+          set +e
+          python -m crucible.cli ci --base refund@v2 --head refund@v1 --replay
+          rc=$?
+          set -e
+          if [ $rc -ne 1 ]; then
+            echo "::error::gate did not block a known regression (exit $rc, expected 1)"
+            exit 1
+          fi
+          echo "gate correctly blocked the regression"
+
+      - name: Reliability gate (refund@v1 -> refund@v2 must pass)
+        run: python -m crucible.cli ci --base refund@v1 --head refund@v2 --replay
 
       - name: Timing
         run: |
           start=$(date +%s%N)
-          python -m crucible.cli ci --base devops@v1 --head devops@v2 > /dev/null
+          python -m crucible.cli ci --base devops@v1 --head devops@v2 --replay > /dev/null
           end=$(date +%s%N)
           echo "gate wall clock: $(( (end - start) / 1000000 )) ms"
