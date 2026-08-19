@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "TOOL: read_ticket {\"ticket_id\": \"api service\"}"
+}

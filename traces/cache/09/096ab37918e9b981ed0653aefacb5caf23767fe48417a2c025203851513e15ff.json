@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "TOOL: notify_customer {\"body\": \"Hello, I checked the status of order A-1002 and it is currently in transit. Since it has not arrived yet, please let us know once it is delivered and if you still notice any damage so we can assist you further.\"}"
+}
