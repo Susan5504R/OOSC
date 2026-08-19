@@ -136,7 +136,7 @@ class Client:
         daily_cap: int | None = None,
     ):
         self.mode = mode
-        self.model = model or os.getenv("CRUCIBLE_AGENT_MODEL", "gemini-2.0-flash-lite")
+        self.model = model or os.getenv("CRUCIBLE_AGENT_MODEL", "gemini-3.5-flash-lite")
         self.cache = cache or Cache()
         self.mock = mock
         self.calls = 0

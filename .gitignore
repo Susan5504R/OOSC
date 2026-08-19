@@ -14,3 +14,4 @@ web/dist/
 # live LLM cache is committed (it IS the replay corpus) — but scratch runs are not
 runs/
 .DS_Store
+.crucible_budget.json
