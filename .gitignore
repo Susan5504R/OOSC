@@ -1,0 +1,16 @@
+.env
+*.pyc
+__pycache__/
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+node_modules/
+web/dist/
+.vercel
+
+# live LLM cache is committed (it IS the replay corpus) — but scratch runs are not
+runs/
+.DS_Store

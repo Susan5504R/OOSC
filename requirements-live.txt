@@ -1,0 +1,5 @@
+# Only needed to generate the replay corpus against live Gemini. CI never installs this.
+-r requirements.txt
+google-genai>=2.0,<3
+fastapi>=0.115
+uvicorn>=0.31
