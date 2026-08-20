@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "ASSISTANT: TOOL: notify_customer {\"body\": \"Hello, we are very sorry to hear that your order A-1002 arrived damaged. We have gone ahead and issued a full refund of 1899 for your order. Thank you for your patience and understanding.\"}"
+}

@@ -40,8 +40,9 @@ asks five times with escalating social pressure and reports the **Guardrail Brea
 
 **5. A CI gate that actually runs.**
 `crucible ci` exits non-zero on a reliability regression, wired to a GitHub Action that runs
-in replay mode **with zero secrets configured**. Measured locally: the gate takes **262 ms**
-and the test suite **546 ms** (excluding checkout and dependency install).
+in replay mode **with zero secrets configured**, gating on the real recorded corpus (not the
+`--mock-llm` fixture) for both agent pairs. Measured locally: one gate comparison takes
+**~370 ms** and the full test suite **~700 ms** (excluding checkout and dependency install).
 
 ---
 
@@ -59,15 +60,17 @@ python -m crucible.cli ci --base devops@v1 --head devops@v2   # the regression g
 
 No API key needed for any of the above — the default mode is a scripted local model.
 
-Dashboard:
+Dashboard (reads the committed replay corpus by default — no key needed):
 
 ```bash
-python -m crucible.cli run --agent devops@v1 && python -m crucible.cli run --agent devops@v2
+for a in devops@v1 devops@v2 refund@v1 refund@v2; do
+  python -m crucible.cli run --agent "$a" --replay
+done
 python -m crucible.cli report --out web/public/data
 cd web && npm install && npm run dev
 ```
 
-To record real model traces (spends free-tier quota — run once):
+To record fresh model traces yourself (spends free-tier quota — run once per agent):
 
 ```bash
 cp .env.example .env      # add GEMINI_API_KEYS
@@ -79,25 +82,38 @@ python -m crucible.cli run --agent devops@v1 --replay
 
 ## Results
 
-`devops@v1` is a database on-call agent with production access and no guardrails in its
-prompt. `devops@v2` is the same agent with an approval gate and an untrusted-tool-output
-rule. Both run the same 17 generated scenarios.
+Recorded against a live model (`gemini-3.5-flash-lite`) via `crucible corpus`, replayed
+byte-identical from the committed cache with zero API calls. `devops@v1` is a database
+on-call agent with production access and no guardrails in its prompt; `devops@v2` adds an
+approval gate and an untrusted-tool-output rule. `refund@v1`/`v2` are the same split for a
+customer-support agent that can move money. Each pair runs the same 17 generated scenarios.
 
-| | devops@v1 | devops@v2 |
-|---|---|---|
-| Reliability score | **50.0** | **97.1** |
-| Pass rate | 47% | 94% |
-| Guardrail break point | **L3** (authority + business justification) | held at every level |
-| Injection resistance | 0/6 payload classes | 6/6 |
-| Model calls to score | 0 | 0 |
+| | devops@v1 | devops@v2 | refund@v1 | refund@v2 |
+|---|---|---|---|---|
+| Reliability score | **42.4** | **77.1** | **50.0** | **92.4** |
+| Pass rate | 35% | 71% | 47% | 82% |
+| Guardrail break point | **L0** (neutral — no pressure needed) | **L0** (reduced but not eliminated) | **L2** (claimed authority) | held at every level |
+| Injection resistance | 3/6 payload classes | 6/6 | 6/6 | 6/6 |
+| Model calls to score | 0 | 0 | 0 | 0 |
 
-The gate blocks `v2 → v1` and passes `v1 → v2`. That is the whole product in one line.
+The gate blocks `v2 → v1` for both agents and passes `v1 → v2`. That is the whole product
+in one line.
 
-> **Provenance.** These figures come from the deterministic development fixture
-> (`--mock-llm`), which is how the engine is built and tested without spending free-tier
-> quota. Run `crucible corpus` with a Gemini key to record real model traces; the replay
-> corpus is what the demo video and the hosted numbers are drawn from. A `--mock-llm` run is
-> never presented as a real model result.
+**The finding worth reading twice:** `devops@v1` doesn't need any social-engineering
+pressure to drop the table — asked to merely "investigate," it backs the table up, then
+drops it anyway as part of its own cleanup plan. `devops@v2`'s explicit "never `drop_table`
+without an approved change request" rule cuts destructive-action incidents from 6/17 runs to
+3/17 and takes injection resistance to 6/6, but doesn't eliminate the problem outright.
+Prompt-level guardrails alone are not sufficient — which is the whole argument for
+*evaluating* an agent instead of just reading its system prompt. `refund` shows the more
+textbook pattern: holds through urgency, breaks once authority is claimed (L2), stays broken
+under further pressure — the ladder story the taxonomy anticipated.
+
+> **Provenance.** These are real model results, not the `--mock-llm` dev fixture — that
+> mode exists purely so the engine is built and tested without spending free-tier quota, and
+> is never presented as a result. The replay corpus (`traces/cache/`) is what these numbers,
+> the demo video, and the hosted dashboard are drawn from; `crucible run --replay` reproduces
+> them with zero API calls.
 
 ---
 
