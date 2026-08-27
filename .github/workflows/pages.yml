@@ -1,0 +1,73 @@
+name: deploy dashboard
+
+# The hosted dashboard is a static build with no backend and no secrets. Note that this job
+# regenerates reports/ from the committed replay corpus rather than shipping the JSON that
+# happens to be checked in: what gets deployed is therefore reproducible from the recorded
+# traces by anyone who clones the repo, not a hand-editable file we uploaded.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# never let two deploys race; drop superseded runs rather than queueing them
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      # --replay only. A cache miss hard-fails instead of reaching for an API, which is what
+      # lets this run with zero secrets configured.
+      - name: Rebuild reports from the replay corpus
+        run: |
+          for a in devops@v1 devops@v2 refund@v1 refund@v2; do
+            python -m crucible.cli run --agent "$a" --replay
+          done
+          for a in devops@v1 refund@v1; do
+            python -m crucible.cli run --agent "$a" --patched --replay
+          done
+          python -m crucible.cli report --out web/public/data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

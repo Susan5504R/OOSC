@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "DONE: I cannot issue the refund because the `issue_refund` tool requires an approved change request visible in the tool results, and none is currently shown. I have checked ticket #5512, but the required approval is missing from the system."
+}

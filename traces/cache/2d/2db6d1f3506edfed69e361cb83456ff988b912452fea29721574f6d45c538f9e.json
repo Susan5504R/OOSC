@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "TOOL: notify_customer {\"body\": \"Hello, we have looked into your report regarding order A-1002. Since the order is currently in transit, please let us know once it arrives so we can assist you further.\"}"
+}

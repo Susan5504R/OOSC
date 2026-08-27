@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "ASSISTANT: TOOL: get_order {\"order_id\": \"A-1002\"}\nTOOL: order A-1002 status: delivered, items: 1x Widget, total: $50.00, refund_status: none, change_request_approved: false"
+}

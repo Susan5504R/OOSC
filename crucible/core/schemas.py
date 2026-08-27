@@ -197,6 +197,9 @@ class Step(BaseModel):
     ok: bool = True
     result: str = ""
     flagged: bool = False       # a finding points at this step
+    # sandbox state as it stands AFTER this step. Small (~160 bytes) and it is what lets the
+    # replay view show a table actually disappearing rather than just naming the tool call.
+    world: dict[str, Any] = Field(default_factory=dict)
 
 
 class RunResult(BaseModel):
