@@ -5,9 +5,15 @@ import Ladder from './components/Ladder'
 import Injection from './components/Injection'
 import Taxonomy from './components/Taxonomy'
 import Traces from './components/Traces'
+import Theater from './components/Theater'
+import PatchPanel from './components/PatchPanel'
 
 // families are the regression story: baseline vs hardened build of the same agent
 const family = (name: string) => name.split('@')[0]
+
+// "devops@v1+patch" is the auto-patched build of "devops@v1"
+const PATCH_SUFFIX = '+patch'
+const isPatched = (name: string) => name.endsWith(PATCH_SUFFIX)
 
 export default function App() {
   const [data, setData] = useState<Bundle | null>(null)
@@ -30,11 +36,21 @@ export default function App() {
     () => [...new Set((data?.agents ?? []).map((a) => family(a.agent)))],
     [data],
   )
+  // the hand-written v1/v2 pair drives the comparison panels; the auto-patched build is
+  // held aside so it does not read as a third hand-written version of the agent
   const reports = useMemo<AgentReport[]>(
-    () => (data?.agents ?? []).filter((a) => family(a.agent) === fam)
+    () => (data?.agents ?? [])
+      .filter((a) => family(a.agent) === fam && !isPatched(a.agent))
       .sort((a, b) => a.agent.localeCompare(b.agent)),
     [data, fam],
   )
+  const patchedOf = useMemo(() => {
+    const m = new Map<string, AgentReport>()
+    for (const a of data?.agents ?? []) {
+      if (isPatched(a.agent)) m.set(a.agent.slice(0, -PATCH_SUFFIX.length), a)
+    }
+    return m
+  }, [data])
 
   if (err) return <Shell><p style={{ color: 'var(--critical)' }}>Failed to load report.json - {err}</p></Shell>
   if (!data) return <Shell><p style={{ color: 'var(--muted)' }}>Loading…</p></Shell>
@@ -100,6 +116,14 @@ export default function App() {
           sub="every failure mode is detected from the trace"
           tone="good"
         />
+      </div>
+
+      <div className="mb-5">
+        <Theater reports={reports} />
+      </div>
+
+      <div className="mb-5">
+        <PatchPanel report={base} patched={patchedOf.get(base.agent)} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">

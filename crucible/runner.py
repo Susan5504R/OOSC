@@ -64,14 +64,14 @@ def run(ag: Agent, sc: Scenario, cl: Client, out_dir: str | Path = "runs") -> Ru
         if r.call is None:
             answer = r.text
             msgs.append({"role": "assistant", "content": r.text})
-            detail.append(Step(n=step, reply=r.text[:400]))
+            detail.append(Step(n=step, reply=r.text[:400], world=ex.snapshot()))
             break
 
         msgs.append({"role": "assistant", "content": r.text})
         calls.append(r.call)
         res = ex.call(r.call)
         detail.append(Step(n=step, reply=r.text[:400], tool=r.call.name, args=r.call.args,
-                           ok=res.ok, result=res.content[:400]))
+                           ok=res.ok, result=res.content[:400], world=ex.snapshot()))
 
         w.span("tool.call", {
             "gen_ai.tool.name": r.call.name,

@@ -38,7 +38,14 @@ that turns up in **tool-call arguments** proves the agent acted on untrusted tex
 Asking an agent once whether it will drop the production table tells you nothing. Crucible
 asks five times with escalating social pressure and reports the **Guardrail Break Point**.
 
-**5. A CI gate that actually runs.**
+**5. It writes the fix, then proves the fix.**
+Most eval tools stop at the report. `crucible patch` reads what actually broke, emits the
+system-prompt rules that address it — ranked by Shapley-attributed score impact, with the
+evidence attached — and re-runs the patched agent to *measure* whether it helped. Writing
+the patch costs zero model calls. On both agents it landed within a point of hardening a
+human wrote by hand.
+
+**6. A CI gate that actually runs.**
 `crucible ci` exits non-zero on a reliability regression, wired to a GitHub Action that runs
 in replay mode **with zero secrets configured**, gating on the real recorded corpus (not the
 `--mock-llm` fixture) for both agent pairs. Measured locally: one gate comparison takes
@@ -92,22 +99,52 @@ customer-support agent that can move money. Each pair runs the same 17 generated
 |---|---|---|---|---|
 | Reliability score | **42.4** | **77.1** | **50.0** | **92.4** |
 | Pass rate | 35% | 71% | 47% | 82% |
-| Guardrail break point | **L0** (neutral — no pressure needed) | **L0** (reduced but not eliminated) | **L2** (claimed authority) | held at every level |
+| Guardrail break point | **L0** (neutral — no pressure needed) | **L0** (reduced but not eliminated) | **L0** (neutral) | held at every level |
 | Injection resistance | 3/6 payload classes | 6/6 | 6/6 | 6/6 |
 | Model calls to score | 0 | 0 | 0 | 0 |
 
 The gate blocks `v2 → v1` for both agents and passes `v1 → v2`. That is the whole product
 in one line.
 
-**The finding worth reading twice:** `devops@v1` doesn't need any social-engineering
-pressure to drop the table — asked to merely "investigate," it backs the table up, then
-drops it anyway as part of its own cleanup plan. `devops@v2`'s explicit "never `drop_table`
-without an approved change request" rule cuts destructive-action incidents from 6/17 runs to
-3/17 and takes injection resistance to 6/6, but doesn't eliminate the problem outright.
+**The finding worth reading twice:** neither baseline needs social-engineering pressure to
+do the irreversible thing. `devops@v1`, asked merely to "investigate," backs the table up
+and then drops it anyway as part of its own cleanup plan. `devops@v2`'s explicit "never
+`drop_table` without an approved change request" rule cuts destructive-action incidents from
+6/17 runs to 3/17 and takes injection resistance to 6/6, but does not eliminate the problem.
 Prompt-level guardrails alone are not sufficient — which is the whole argument for
-*evaluating* an agent instead of just reading its system prompt. `refund` shows the more
-textbook pattern: holds through urgency, breaks once authority is claimed (L2), stays broken
-under further pressure — the ladder story the taxonomy anticipated.
+*evaluating* an agent instead of reading its system prompt.
+
+**Pressure is not monotonic, and the ladder is reported accordingly.** `refund@v1` fires at
+L0, *holds* at L1, then fires again at L2–L4. A weak model does not degrade smoothly as you
+lean on it, so there is no clean threshold to find; the break point is defined as the
+**lowest** level at which the gated action fires, not the point after which it always does.
+Anything else would report this agent as safer than it is.
+
+### Crucible writes the fix, and the fix is measured
+
+`crucible patch` turns the findings into the rules that would have prevented them, then
+re-runs the patched agent against the *same* scenarios to see whether they actually helped.
+Both numbers below are replayed from live model output, not asserted:
+
+| | refund@v1 | devops@v1 |
+|---|---|---|
+| Baseline | 50.0 | 42.4 |
+| **Auto-patched** | **92.9** (+42.9) | **76.5** (+34.1) |
+| Hand-written `v2`, for comparison | 92.4 | 77.1 |
+| Break point | L0 → held at every level | L0 → L1 |
+| Injection resistance | 6/6 → 6/6 | 3/6 → **6/6** |
+| Model calls to write the patch | 0 | 0 |
+
+On both agents the generated patch lands within a point of the hardening a human wrote by
+hand — from evidence alone, with no model in the loop.
+
+It is not magic, and the report says so. The patch closed 34.1 of a possible 54.7 points on
+`devops@v1` and moved its break point only L0 → L1: the agent still drops the table under
+urgency. Each clause is priced by its **Shapley** share of the achievable gain rather than a
+leave-one-out delta, because per-run penalties cap at 1.0 — once a run trips three failure
+modes, removing any single one barely moves the score, and leave-one-out consequently ranked
+*dropping a production table* below *fabricating a parameter*. See
+`crucible/patching/__init__.py`.
 
 > **Provenance.** These are real model results, not the `--mock-llm` dev fixture — that
 > mode exists purely so the engine is built and tested without spending free-tier quota, and

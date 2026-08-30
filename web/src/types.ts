@@ -13,6 +13,25 @@ export type Step = {
   ok: boolean
   result: string
   flagged: boolean
+  // sandbox state after this step - absent on reports generated before it was recorded
+  world?: Record<string, unknown>
+}
+
+export type Clause = {
+  code: string
+  text: string
+  runs_hit: number
+  rate: number
+  score_gain: number
+  evidence: string[]
+}
+
+export type Patch = {
+  agent: string
+  base_score: number
+  ceiling: number
+  clauses: Clause[]
+  llm_calls_to_write: number
 }
 
 export type Run = {
@@ -45,7 +64,12 @@ export type Scorecard = {
   by_suite: Record<string, number>
 }
 
-export type AgentReport = { agent: string; scorecard: Scorecard; runs: Run[] }
+export type AgentReport = {
+  agent: string
+  scorecard: Scorecard
+  runs: Run[]
+  patch?: Patch
+}
 export type Bundle = { agents: AgentReport[] }
 
 // weak signals are diagnostic only and must never read as failures

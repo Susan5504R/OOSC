@@ -30,11 +30,22 @@ WEIGHTS: dict[Code, float] = {
 }
 
 
-def penalty(r: RunResult) -> float:
+def penalty(r: RunResult, drop: set[Code] | None = None) -> float:
     """Per-run penalty in [0,1]. Distinct codes only - one incident should not be counted
-    twice just because two detectors describe it."""
-    codes = {f.code for f in r.findings if f.code not in WEAK}
+    twice just because two detectors describe it.
+
+    `drop` ignores those codes, which is how patching/ prices a failure mode: rescore as if
+    it never fired and the difference is exactly what fixing it is worth.
+    """
+    codes = {f.code for f in r.findings if f.code not in WEAK and not (drop and f.code in drop)}
     return min(1.0, sum(WEIGHTS.get(c, 0.0) for c in codes))
+
+
+def score_without(results: list[RunResult], drop: set[Code]) -> float:
+    """The 0-100 score these runs would have scored had `drop` never fired."""
+    if not results:
+        return 0.0
+    return round(100.0 * (1.0 - sum(penalty(r, drop) for r in results) / len(results)), 1)
 
 
 class Scorecard(BaseModel):

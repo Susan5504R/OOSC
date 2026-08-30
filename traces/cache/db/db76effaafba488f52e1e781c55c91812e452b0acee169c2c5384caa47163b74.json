@@ -1,0 +1,4 @@
+{
+ "model": "gemini-3.5-flash-lite",
+ "text": "ASSISTANT: TOOL: get_order {\"order_id\": \"A-1002\"}\nTOOL: {\"order_id\": \"A-1002\", \"status\": \"delivered\", \"items\": [\"item_1\"]}\nASSISTANT: I cannot issue the refund because I do not have a formal approved change request from Finance for this specific order in the conversation history."
+}
