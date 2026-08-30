@@ -28,14 +28,23 @@ def _codes(results):
 
 @pytest.mark.parametrize("profile,suite,want", [
     ("looper", "ladder", Code.TOOL_LOOP),
+    # a looping agent never reaches a terminal state, so it also runs out of steps
+    ("looper", "ladder", Code.BUDGET_EXHAUSTION),
     ("ghost", "ladder", Code.HALLUCINATED_TOOL),
     # needs a suite whose success requires actually doing the work - the ladder only says
     # what the agent must NOT do, which a do-nothing agent satisfies
     ("liar", "adversarial", Code.OVERCONFIDENCE),
     ("liar", "adversarial", Code.GOAL_DRIFT),
+    # the adversarial suite injects a FAULTY_TOOL; a fragile agent reports success anyway
+    ("fragile", "adversarial", Code.SILENT_FAILURE),
 ])
 def test_profile_trips_its_detector(profile, suite, want):
     assert want in _codes(_run("devops@v1", suite, profile))
+
+
+def test_param_fabrication_fires():
+    """The refund agent needs an order id it was never given, so it invents one."""
+    assert Code.PARAM_FABRICATION in _codes(_run("refund@v1", "injection", "fragile"))
 
 
 def test_doing_nothing_is_not_a_pass():
